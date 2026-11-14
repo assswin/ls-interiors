@@ -72,6 +72,45 @@ type MeasurementRow = {
   identificationColor: string
 }
 
+type SavedOrder = {
+  id: string
+  customerName: string
+  customerPhone: string
+  orderDate: string
+  projectName: string
+  defaultTolerance: number
+  defaultApplyTolerance: boolean
+  fromUnit: RowUnit
+  toUnit: RowUnit
+  rows: MeasurementRow[]
+  createdAt: string
+  updatedAt: string
+}
+
+const STORAGE_KEY = 'ls-interiors-saved-orders'
+
+const getTodayDate = () => {
+  const today = new Date()
+  const localDate = new Date(
+    today.getTime() - today.getTimezoneOffset() * 60000
+  )
+  return localDate.toISOString().slice(0, 10)
+}
+
+const loadSavedOrders = (): SavedOrder[] => {
+  try {
+    const storedOrders = localStorage.getItem(STORAGE_KEY)
+
+    if (!storedOrders) return []
+
+    const parsedOrders: unknown = JSON.parse(storedOrders)
+
+    return Array.isArray(parsedOrders) ? parsedOrders as SavedOrder[] : []
+  } catch {
+    return []
+  }
+}
+
 const createEmptyRow = (
   id: number,
   toleranceMm: number,
@@ -113,14 +152,14 @@ const convertToMm = (value: number, unit: RowUnit): number => {
   }
 }
 
-const convertFromMm = (valueMm: number, unit: RowUnit): number => {
+const convertFromMm = (value: number, unit: RowUnit): number => {
   switch (unit) {
     case 'in':
-      return valueMm / 25.4
+      return value / 25.4
     case 'cm':
-      return valueMm / 10
+      return value / 10
     case 'mm':
-      return valueMm
+      return value
   }
 }
 
@@ -154,15 +193,28 @@ const formatCutValue = (
 }
 
 function Measurements() {
+  // Customer and project details
+  const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [orderDate, setOrderDate] = useState(getTodayDate)
+  const [projectName, setProjectName] = useState('')
+
+  // Default calculation settings
   const [defaultTolerance, setDefaultTolerance] = useState(5)
   const [defaultApplyTolerance, setDefaultApplyTolerance] = useState(true)
 
+  // Measurement units
   const [fromUnit, setFromUnit] = useState<RowUnit>('in')
   const [toUnit, setToUnit] = useState<RowUnit>('mm')
 
+  // Measurement rows
   const [rows, setRows] = useState<MeasurementRow[]>([
     createEmptyRow(1, 5, true, identificationColors[0]),
   ])
+
+  // Saved order management
+  const [savedOrders, setSavedOrders] = useState<SavedOrder[]>(loadSavedOrders)
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null)
 
   const getNextRowId = (currentRows: MeasurementRow[]) => {
     return Math.max(0, ...currentRows.map((row) => row.id)) + 1
@@ -226,6 +278,177 @@ function Measurements() {
 
   const deleteRow = (id: number) => {
     setRows((currentRows) => currentRows.filter((row) => row.id !== id))
+  }
+
+  // Save all order information to browser storage
+  const saveOrdersToStorage = (orders: SavedOrder[]) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(orders))
+      setSavedOrders(orders)
+      return true
+    } catch {
+      window.alert('Unable to save this order in browser storage.')
+      return false
+    }
+  }
+
+  const getCurrentOrderData = (): Omit<SavedOrder, 'id' | 'createdAt' | 'updatedAt'> => ({
+    customerName: customerName.trim(),
+    customerPhone: customerPhone.trim(),
+    orderDate,
+    projectName: projectName.trim(),
+    defaultTolerance,
+    defaultApplyTolerance,
+    fromUnit,
+    toUnit,
+    rows: rows.map((row) => ({ ...row })),
+  })
+
+  // Save as a new order
+  const saveOrder = () => {
+    if (!customerName.trim()) {
+      window.alert('Please enter the customer name.')
+      return
+    }
+
+    if (!projectName.trim()) {
+      window.alert('Please enter the project / order name.')
+      return
+    }
+
+    const now = new Date().toISOString()
+
+    const newOrder: SavedOrder = {
+      id: crypto.randomUUID(),
+      ...getCurrentOrderData(),
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    const updatedOrders = [...savedOrders, newOrder]
+
+    if (saveOrdersToStorage(updatedOrders)) {
+      setCurrentOrderId(newOrder.id)
+      window.alert('Order saved successfully!')
+    }
+  }
+
+  // Update the currently opened order
+  const updateOrder = () => {
+    if (!currentOrderId) {
+      saveOrder()
+      return
+    }
+
+    if (!customerName.trim()) {
+      window.alert('Please enter the customer name.')
+      return
+    }
+
+    if (!projectName.trim()) {
+      window.alert('Please enter the project / order name.')
+      return
+    }
+
+    const existingOrder = savedOrders.find(
+      (order) => order.id === currentOrderId
+    )
+
+    if (!existingOrder) {
+      window.alert('Saved order not found. Please save it as a new order.')
+      setCurrentOrderId(null)
+      return
+    }
+
+    const updatedOrder: SavedOrder = {
+      ...existingOrder,
+      ...getCurrentOrderData(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    const updatedOrders = savedOrders.map((order) =>
+      order.id === currentOrderId ? updatedOrder : order
+    )
+
+    if (saveOrdersToStorage(updatedOrders)) {
+      window.alert('Order updated successfully!')
+    }
+  }
+
+  // Open an existing saved order
+  const openOrder = (order: SavedOrder) => {
+    const confirmed = window.confirm(
+      'Open this order? Any unsaved changes in the current form will be lost.'
+    )
+
+    if (!confirmed) return
+
+    setCustomerName(order.customerName)
+    setCustomerPhone(order.customerPhone)
+    setOrderDate(order.orderDate)
+    setProjectName(order.projectName)
+
+    setDefaultTolerance(order.defaultTolerance)
+    setDefaultApplyTolerance(order.defaultApplyTolerance)
+
+    setFromUnit(order.fromUnit)
+    setToUnit(order.toUnit)
+
+    setRows(order.rows.map((row) => ({ ...row })))
+    setCurrentOrderId(order.id)
+
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Delete an entire saved order
+  const deleteOrder = (id: string) => {
+    const order = savedOrders.find((item) => item.id === id)
+
+    if (!order) return
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${order.projectName}"? This cannot be undone.`
+    )
+
+    if (!confirmed) return
+
+    const updatedOrders = savedOrders.filter((item) => item.id !== id)
+
+    if (saveOrdersToStorage(updatedOrders)) {
+      if (currentOrderId === id) {
+        setCurrentOrderId(null)
+      }
+
+      window.alert('Order deleted successfully!')
+    }
+  }
+
+  // Start a fresh order
+  const createNewOrder = () => {
+    const confirmed = window.confirm(
+      'Start a new order? Any unsaved changes in the current form will be lost.'
+    )
+
+    if (!confirmed) return
+
+    setCustomerName('')
+    setCustomerPhone('')
+    setOrderDate(getTodayDate())
+    setProjectName('')
+
+    setDefaultTolerance(5)
+    setDefaultApplyTolerance(true)
+
+    setFromUnit('in')
+    setToUnit('mm')
+
+    setRows([
+      createEmptyRow(1, 5, true, identificationColors[0]),
+    ])
+
+    setCurrentOrderId(null)
+
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // Show the Mesh columns only when at least one 2.5 Track is selected.
@@ -361,10 +584,84 @@ function Measurements() {
           <p>Select a model and enter the measurements for each window.</p>
         </div>
 
-        <button type="button" onClick={addRow}>
-          + Add Window
-        </button>
+        <div className="measurement-save-actions">
+          <button type="button" onClick={createNewOrder}>
+            + New Order
+          </button>
+
+          <button type="button" onClick={saveOrder}>
+            Save Order
+          </button>
+
+          <button
+            type="button"
+            onClick={updateOrder}
+            disabled={!currentOrderId}
+          >
+            Update Order
+          </button>
+
+          <button type="button" onClick={addRow}>
+            + Add Window
+          </button>
+        </div>
       </div>
+
+      {/* SAVED ORDERS */}
+      <div className="saved-orders-panel">
+        <div className="saved-orders-heading">
+          <div>
+            <h3>Saved Orders</h3>
+            <p>Open, update or delete your previously saved orders.</p>
+          </div>
+
+          <strong>{savedOrders.length} saved</strong>
+        </div>
+
+        {savedOrders.length === 0 ? (
+          <p className="saved-orders-empty">
+            No saved orders yet. Complete an order and click Save Order.
+          </p>
+        ) : (
+          <div className="saved-orders-list">
+            {savedOrders.map((order) => (
+              <div className="saved-order-item" key={order.id}>
+                <div className="saved-order-information">
+                  <strong>{order.projectName}</strong>
+                  <span>Customer: {order.customerName}</span>
+                  <span>Phone: {order.customerPhone || '-'}</span>
+                  <span>Date: {order.orderDate}</span>
+                  <span>Windows: {order.rows.length}</span>
+                </div>
+
+                <div className="saved-order-actions">
+                  <button
+                    type="button"
+                    onClick={() => openOrder(order)}
+                  >
+                    Open
+                  </button>
+
+                  <button
+                    type="button"
+                    className="delete-row-button"
+                    onClick={() => deleteOrder(order.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {currentOrderId && (
+        <div className="current-order-indicator">
+          Currently editing a saved order. Remember to click Update Order
+          to save your latest changes.
+        </div>
+      )}
 
       <div className="tolerance-settings">
         <div>
@@ -428,15 +725,45 @@ function Measurements() {
         </div>
       </div>
 
+      {/* CUSTOMER AND PROJECT DETAILS */}
       <div className="measurement-order-details">
         <label>
           Customer Name
-          <input type="text" placeholder="Enter customer name" />
+          <input
+            type="text"
+            placeholder="Enter customer name"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+          />
+        </label>
+
+        <label>
+          Customer Phone Number
+          <input
+            type="tel"
+            placeholder="Enter phone number"
+            value={customerPhone}
+            onChange={(e) => setCustomerPhone(e.target.value)}
+          />
+        </label>
+
+        <label>
+          Order Date
+          <input
+            type="date"
+            value={orderDate}
+            onChange={(e) => setOrderDate(e.target.value)}
+          />
         </label>
 
         <label>
           Project / Order Name
-          <input type="text" placeholder="Enter project name" />
+          <input
+            type="text"
+            placeholder="Enter project name"
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+          />
         </label>
       </div>
 
