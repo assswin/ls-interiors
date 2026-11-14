@@ -1,0 +1,48 @@
+
+from decimal import Decimal
+
+from pydantic import BaseModel, ConfigDict, Field
+from uuid import UUID
+
+
+class ProjectCreate(BaseModel):
+    customer_id: UUID
+
+    name: str = Field(
+        min_length=2,
+        max_length=200,
+    )
+
+    description: str | None = None
+
+    input_unit: str = Field(
+        default="in",
+        pattern="^(in|cm|mm)$",
+    )
+
+    output_unit: str = Field(
+        default="mm",
+        pattern="^(in|cm|mm)$",
+    )
+
+    default_tolerance_mm: Decimal = Field(
+        default=Decimal("5"),
+        ge=0,
+        le=100,
+    )
+
+    default_apply_tolerance: bool = True
+
+
+class ProjectResponse(BaseModel):
+    id: UUID
+    customer_id: UUID
+    name: str
+    description: str | None
+    status: str
+    input_unit: str
+    output_unit: str
+    default_tolerance_mm: Decimal
+    default_apply_tolerance: bool
+
+    model_config = ConfigDict(from_attributes=True)
