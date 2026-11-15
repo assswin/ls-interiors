@@ -6,12 +6,10 @@ export type Language = 'en' | 'ta'
 export type PageKey =
   | 'dashboard'
   | 'customers'
-  | 'projects'
-  | 'measurements'
-  | 'windowModels'
-  | 'calculations'
+  | 'measurementsOrders'
   | 'drawings'
   | 'workshop'
+  | 'settings'
 
 interface SidebarProps {
   language: Language
@@ -32,14 +30,42 @@ function Sidebar({
     ta: string
     icon: string
   }[] = [
-    { key: 'dashboard', en: 'Dashboard', ta: 'முகப்பு', icon: '▦' },
-    { key: 'customers', en: 'Customers', ta: 'வாடிக்கையாளர்கள்', icon: '♙' },
-    { key: 'projects', en: 'Projects', ta: 'திட்டங்கள்', icon: '▣' },
-    { key: 'measurements', en: 'Measurements', ta: 'அளவீடுகள்', icon: '⌗' },
-    { key: 'windowModels', en: 'Window Models', ta: 'ஜன்னல் வகைகள்', icon: '▤' },
-    { key: 'calculations', en: 'Calculations', ta: 'கணக்கீடுகள்', icon: '∑' },
-    { key: 'drawings', en: 'Drawings & PDFs', ta: 'வரைபடங்கள் மற்றும் PDF', icon: '▧' },
-    { key: 'workshop', en: 'Workshop', ta: 'பட்டறை', icon: '⚙' },
+    {
+      key: 'dashboard',
+      en: 'Dashboard',
+      ta: 'முகப்பு',
+      icon: '▦',
+    },
+    {
+      key: 'customers',
+      en: 'Customers',
+      ta: 'வாடிக்கையாளர்கள்',
+      icon: '♙',
+    },
+    {
+      key: 'measurementsOrders',
+      en: 'Measurements & Orders',
+      ta: 'அளவீடுகள் மற்றும் ஆர்டர்கள்',
+      icon: '⌗',
+    },
+    {
+      key: 'drawings',
+      en: 'Drawings & PDFs',
+      ta: 'வரைபடங்கள் மற்றும் PDF',
+      icon: '▧',
+    },
+    {
+      key: 'workshop',
+      en: 'Workshop',
+      ta: 'பட்டறை',
+      icon: '⚒',
+    },
+    {
+      key: 'settings',
+      en: 'Settings',
+      ta: 'அமைப்புகள்',
+      icon: '⚙',
+    },
   ]
 
   return (
@@ -68,7 +94,9 @@ function Sidebar({
             onClick={() => onNavigate(item.key)}
           >
             <span className="sidebar-icon">{item.icon}</span>
-            <span>{language === 'en' ? item.en : item.ta}</span>
+            <span>
+              {language === 'en' ? item.en : item.ta}
+            </span>
           </button>
         ))}
       </nav>

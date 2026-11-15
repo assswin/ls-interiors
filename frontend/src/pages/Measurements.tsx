@@ -1,5 +1,5 @@
-
 import { useState } from 'react'
+import type { Customer } from './Customers'
 
 import {
   calculateSlidingWindow,
@@ -85,6 +85,10 @@ type SavedOrder = {
   rows: MeasurementRow[]
   createdAt: string
   updatedAt: string
+}
+
+type MeasurementsProps = {
+  selectedCustomer: Customer | null
 }
 
 const STORAGE_KEY = 'ls-interiors-saved-orders'
@@ -192,10 +196,14 @@ const formatCutValue = (
   return Number(convertedValue.toFixed(2)).toString()
 }
 
-function Measurements() {
+function Measurements({ selectedCustomer }: MeasurementsProps) {
   // Customer and project details
-  const [customerName, setCustomerName] = useState('')
-  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerName, setCustomerName] = useState(
+    selectedCustomer?.name ?? ''
+  )
+  const [customerPhone, setCustomerPhone] = useState(
+    selectedCustomer?.phone ?? ''
+  )
   const [orderDate, setOrderDate] = useState(getTodayDate)
   const [projectName, setProjectName] = useState('')
 
@@ -423,7 +431,7 @@ function Measurements() {
     }
   }
 
-  // Start a fresh order
+  // Start a fresh order for the currently selected customer
   const createNewOrder = () => {
     const confirmed = window.confirm(
       'Start a new order? Any unsaved changes in the current form will be lost.'
@@ -431,8 +439,8 @@ function Measurements() {
 
     if (!confirmed) return
 
-    setCustomerName('')
-    setCustomerPhone('')
+    setCustomerName(selectedCustomer?.name ?? '')
+    setCustomerPhone(selectedCustomer?.phone ?? '')
     setOrderDate(getTodayDate())
     setProjectName('')
 
@@ -733,6 +741,7 @@ function Measurements() {
             type="text"
             placeholder="Enter customer name"
             value={customerName}
+            readOnly={selectedCustomer !== null}
             onChange={(e) => setCustomerName(e.target.value)}
           />
         </label>
@@ -743,6 +752,7 @@ function Measurements() {
             type="tel"
             placeholder="Enter phone number"
             value={customerPhone}
+            readOnly={selectedCustomer !== null}
             onChange={(e) => setCustomerPhone(e.target.value)}
           />
         </label>

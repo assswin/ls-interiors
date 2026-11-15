@@ -1,28 +1,46 @@
 
 import { useState } from 'react'
+
+import Customers, {
+  type Customer,
+} from './pages/Customers'
+
 import Sidebar, {
   type Language,
   type PageKey,
 } from './components/Sidebar'
+
 import Measurements from './pages/Measurements'
+
 import './App.css'
 
 function App() {
   const [language, setLanguage] = useState<Language>('en')
-  const [activePage, setActivePage] = useState<PageKey>('dashboard')
+
+  const [activePage, setActivePage] =
+    useState<PageKey>('dashboard')
+
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<Customer | null>(null)
 
   const pageTitles: Record<PageKey, { en: string; ta: string }> = {
     dashboard: { en: 'Dashboard', ta: 'முகப்பு' },
     customers: { en: 'Customers', ta: 'வாடிக்கையாளர்கள்' },
-    projects: { en: 'Projects', ta: 'திட்டங்கள்' },
-    measurements: { en: 'Measurements', ta: 'அளவீடுகள்' },
-    windowModels: { en: 'Window Models', ta: 'ஜன்னல் வகைகள்' },
-    calculations: { en: 'Calculations', ta: 'கணக்கீடுகள்' },
+    measurementsOrders: {
+      en: 'Measurements & Orders',
+      ta: 'அளவீடுகள் மற்றும் ஆர்டர்கள்',
+    },
     drawings: { en: 'Drawings & PDFs', ta: 'வரைபடங்கள் மற்றும் PDF' },
     workshop: { en: 'Workshop', ta: 'பட்டறை' },
+    settings: { en: 'Settings', ta: 'அமைப்புகள்' },
   }
 
   const currentTitle = pageTitles[activePage]
+
+  function handleNewOrder(customer: Customer) {
+    setSelectedCustomer(customer)
+    setActivePage('measurementsOrders')
+  }
 
   return (
     <div className="app-shell">
@@ -37,7 +55,9 @@ function App() {
         <header className="dashboard-header">
           <div>
             <h1>
-              {language === 'en' ? currentTitle.en : currentTitle.ta}
+              {language === 'en'
+                ? currentTitle.en
+                : currentTitle.ta}
             </h1>
 
             <p>
@@ -50,31 +70,22 @@ function App() {
 
         {activePage === 'dashboard' ? (
           <section className="dashboard-placeholder">
-            <h2>
-              {language === 'en' ? 'Your workspace' : 'உங்கள் பணியிடம்'}
-            </h2>
-
-            <p>
-              {language === 'en'
-                ? 'Your customers, projects and window measurements will appear here.'
-                : 'உங்கள் வாடிக்கையாளர்கள், திட்டங்கள் மற்றும் ஜன்னல் அளவீடுகள் இங்கே தோன்றும்.'}
-            </p>
+            Dashboard
           </section>
-        ) : activePage === 'measurements' ? (
-          <Measurements />
+        ) : activePage === 'customers' ? (
+          <Customers
+            language={language}
+            selectedCustomer={selectedCustomer}
+            onSelectCustomer={setSelectedCustomer}
+            onNewOrder={handleNewOrder}
+          />
+        ) : activePage === 'measurementsOrders' ? (
+          <Measurements
+            selectedCustomer={selectedCustomer}
+          />
         ) : (
           <section className="dashboard-placeholder">
-            <h2>
-              {language === 'en'
-                ? `${currentTitle.en} Workspace`
-                : `${currentTitle.ta} பணியிடம்`}
-            </h2>
-
-            <p>
-              {language === 'en'
-                ? 'This workspace will be developed step by step.'
-                : 'இந்தப் பகுதி படிப்படியாக உருவாக்கப்படும்.'}
-            </p>
+            {currentTitle.en}
           </section>
         )}
       </main>
